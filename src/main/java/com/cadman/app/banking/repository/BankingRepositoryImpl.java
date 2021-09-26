@@ -17,7 +17,7 @@ import org.springframework.transaction.annotation.Transactional;
 import com.cadman.app.banking.entity.AccountEntity;
 
 @Repository
-public class BankingRespositoryImpl implements BankingRepository {
+public class BankingRepositoryImpl implements BankingRepository {
 
 	@PersistenceContext
 	EntityManager em;
