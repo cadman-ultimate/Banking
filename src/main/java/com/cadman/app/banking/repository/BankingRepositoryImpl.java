@@ -52,7 +52,6 @@ public class BankingRepositoryImpl implements BankingRepository {
 	}
 
 	@Override
-	@Transactional
 	public void updateBalance(double balance, String accNumber) throws Exception {
 
 		CriteriaBuilder cb = em.getCriteriaBuilder();
@@ -65,25 +64,19 @@ public class BankingRepositoryImpl implements BankingRepository {
 		Query query = em.createQuery(update);
 		int result = query.executeUpdate();
 		if (result == -1)
-			throw new Exception();
+			throw new Exception("Update result not completed, check db connection.");
 
 	}
 
 	@Override
-	@Transactional
 	public void transferFunds(double fromBalance, double toBalance, String fromAccountNo, String toAccountNo) {
 
 		Query query = em.createQuery(
-//				"UPDATE AccountEntity t SET "
-//				+ "t.balance = CASE WHEN t.accNumber = :fromAccountNo THEN :fromBalance ELSE :toBalance END "
-//				+ "WHERE t.accNumber IN (:fromAccountNo, :toAccountNo)");
 
 				"UPDATE AccountEntity t SET " + "t.balance = IF(t.accNumber = :fromAccountNo, 100.0, 100.0) "
 						+ "WHERE t.accNumber IN(:fromAccountNo, :toAccountNo)");
 
 		query.setParameter("fromAccountNo", fromAccountNo);
-//		query.setParameter("fromBalance", fromBalance);
-//		query.setParameter("toBalance", toBalance);
 		query.setParameter("toAccountNo", toAccountNo);
 
 		query.executeUpdate();

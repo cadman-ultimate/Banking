@@ -22,6 +22,8 @@ import com.cadman.app.banking.response.Response;
  * 
  * Small Sample Tests to demonstrate JUnit compilation
  * 
+ * Current stage is just for Junit and mocking example, not all tests added
+ * 
  * TODO: All JUnit tests for all methods with coverage testing checked
  *
  */

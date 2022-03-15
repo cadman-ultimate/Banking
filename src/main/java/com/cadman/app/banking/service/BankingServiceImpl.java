@@ -4,16 +4,27 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.stream.Collectors;
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 import com.cadman.app.banking.entity.AccountEntity;
+import com.cadman.app.banking.exception.IncompleteFundsException;
 import com.cadman.app.banking.model.Person;
 import com.cadman.app.banking.repository.BankingRepository;
 import com.cadman.app.banking.response.Response;
 
 @Service
 public class BankingServiceImpl implements BankingService {
+	
+	private static final String WITHDRAW_FUNDS_FAILED_WITH_ERROR = "Withdraw funds failed with error: ";
+	private static final String TRANSFER_FUNDS_FAILED_WITH_ERROR = "Transfer funds failed with error: ";
+	private static final String INADEQUATE_FUNDS_ERROR_MSG = "Not enough funds to complete task!";
+	private static final String NEW_BALANCE = "Your new balance: ";
+
+	Logger logger = LoggerFactory.getLogger(BankingServiceImpl.class);
 
 	@Autowired
 	BankingRepository repository;
@@ -25,7 +36,8 @@ public class BankingServiceImpl implements BankingService {
 			AccountEntity entity = repository.getAccount(accNumber);
 			response.setStatus(true);
 			response.setMsg("Your remaining balance: €" + entity.getBalance());
-		} catch (Exception e) {
+		} catch (Exception ex) {
+			logger.error("Get Balance failed with error: " + ex.getMessage() + ex.getCause());
 			response.setStatus(false);
 			response.setMsg("Error: Could not retrieve balance, check account exists.");
 		}
@@ -34,6 +46,7 @@ public class BankingServiceImpl implements BankingService {
 	}
 
 	@Override
+	@Transactional
 	public Response<String> addAmount(double amount, String accNumber) {
 
 		Response<String> response = new Response<String>();
@@ -45,8 +58,9 @@ public class BankingServiceImpl implements BankingService {
 			newBalance = currentBalance + amount;
 			repository.updateBalance(newBalance, accNumber);
 			response.setStatus(true);
-			response.setMsg("Your new balance: " + newBalance);
-		} catch (Exception e) {
+			response.setMsg(NEW_BALANCE + newBalance);
+		} catch (Exception ex) {
+			logger.error("Add funds failed with error: " + ex.getMessage() + ex.getCause());
 			response.setStatus(false);
 			response.setMsg("Error: Could not add funds!");
 		}
@@ -56,6 +70,7 @@ public class BankingServiceImpl implements BankingService {
 	}
 
 	@Override
+	@Transactional
 	public Response<String> withdrawAmount(String accNumber, double amount) {
 
 		Response<String> response = new Response<String>();
@@ -64,12 +79,17 @@ public class BankingServiceImpl implements BankingService {
 
 		try {
 			currentBalance = repository.getAccount(accNumber).getBalance();
-			if (amount > currentBalance) throw new Exception();
+			if (amount > currentBalance) throw new IncompleteFundsException(INADEQUATE_FUNDS_ERROR_MSG);
 			newBalance = currentBalance - amount;
 			repository.updateBalance(newBalance, accNumber);
 			response.setStatus(true);
-			response.setMsg("Your new balance: " + newBalance);
-		} catch (Exception e) {
+			response.setMsg(NEW_BALANCE + newBalance);
+		} catch (IncompleteFundsException ie) {
+			logger.error(TRANSFER_FUNDS_FAILED_WITH_ERROR + ie.getMessage());
+			response.setStatus(false);
+			response.setMsg(ie.getMessage());
+		} catch (Exception ex) {
+			logger.error(WITHDRAW_FUNDS_FAILED_WITH_ERROR + ex.getMessage() + ex.getCause());
 			response.setStatus(false);
 			response.setMsg("Error: Check account exists and necessary funds available");
 		}
@@ -79,6 +99,7 @@ public class BankingServiceImpl implements BankingService {
 	}
 
 	@Override
+	@Transactional
 	public Response<String> transferFunds(double amount, String fromAccountNo, String toAccountNo) {
 
 		Response<String> response = new Response<String>();
@@ -87,13 +108,17 @@ public class BankingServiceImpl implements BankingService {
 		try {
 			fromBalance = repository.getAccount(fromAccountNo).getBalance();
 			toBalance = repository.getAccount(toAccountNo).getBalance();
-			if (amount > toBalance) throw new Exception();
-//			repository.transferFunds(fromBalance, toBalance, fromAccountNo, toAccountNo);
+			if (amount > fromBalance) throw new IncompleteFundsException(INADEQUATE_FUNDS_ERROR_MSG);
 			repository.updateBalance(fromBalance - amount, fromAccountNo);
 			repository.updateBalance(toBalance + amount, toAccountNo);
 			response.setStatus(true);
 			response.setMsg("Transfer complete");
+		} catch (IncompleteFundsException ie) {
+			logger.error(TRANSFER_FUNDS_FAILED_WITH_ERROR + ie.getMessage());
+			response.setStatus(false);
+			response.setMsg(ie.getMessage());
 		} catch (Exception ex) {
+			logger.error(TRANSFER_FUNDS_FAILED_WITH_ERROR + ex.getMessage() + ex.getCause());
 			response.setStatus(false);
 			response.setMsg("Transfer could not be completed");
 		}
