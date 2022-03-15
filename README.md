@@ -26,9 +26,10 @@ Request Body sample:
 {
     "firstName" : "Joe",
     "lastName" : "Bloggs",
-    "accNumber" : "11111111",
+    "accNumber" : "12345678",
     "email" : "Joe.Bloggs@Google.com"
 }
+Add x2 accounts to test transfer funds endpoint
 
 Add funds to account - PATCH:
 /accounts/funds/add
